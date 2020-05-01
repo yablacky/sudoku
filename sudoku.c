@@ -1,3 +1,7 @@
+/**
+ * Command line interface sudoku solver.
+ */
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -253,7 +257,7 @@ int init_known(int count, const char** cells, int next_row)
 		if (cell[0] == '#')	// commented out - ignore this preset.
 			continue;
 		if (!strchr(cell, ':') && strlen(cell) == 9) {
-			// define "next" row i
+			// preset the complete "next" row i
 			row = cell;
 			if (i < 0 || i > 8) {
 				fprintf(stderr, "token #%d \"%s\": too many rows, got %d\n", c + 1, cell, i + 1);
@@ -262,6 +266,7 @@ int init_known(int count, const char** cells, int next_row)
 			}
 		}
 		else if (sscanf_s(cell, "%1d:%n%1c", &i, &n, &r, 1) == 2) {
+			// preset the complete specified row
 			if (i < 1 || i > 9) {
 				fprintf(stderr, "token #%d \"%s\": bad row %d\n", c+1, cell, i);
 				nerr++;
@@ -293,6 +298,7 @@ int init_known(int count, const char** cells, int next_row)
 		}
 		else if (sscanf_s(cell, "%1d%1d%1d%1c", &i, &j, &n, &r, 1) == 3 ||
 				 sscanf_s(cell, "%1d%1d:%1d%1c", &i, &j, &n, &r, 1) == 3) {
+			// preset a given cell
 			if (i < 1 || i > 9) {
 				fprintf(stderr, "token #%d \"%s\": bad row %d\n", c+1, cell, i);
 				nerr++;
