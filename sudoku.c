@@ -61,32 +61,37 @@ const char *prog = "?";
 void print_usage()
 {
 	printf(
-		"usage: %s [--help] [--silent] [--max n] [-] [preset_fields...]\n"
-		"    --max nnn, -m nnn   Where nnn is a number (default 2).\n"
-		"                   Do not search more solutions than this.\n"
-		"    --silent, -s   Do not print solution boards, count them only.\n"
-		"                   Specify twice to be even more silent.\n"
-		"    --help, -h, -? Print this help.\n"
-		"    -           A single dash reads preset_fields from stdin, line\n"
-		"                by line or in one line, separated by blanks.\n"
-		"                Use io-redirection to read from a file.\n"
+		"Find sudoku solutions using a backtracking algorithm.\n"
+		"usage: %s [--help] [--silent] [--max n] [-] [cell_definition...]\n"
+		"  --max nnn, -m nnn   Where nnn is a number (default 2).\n"
+		"                 Do not search more solutions than this.\n"
+		"  --silent, -s   Do not print solution boards, count them only.\n"
+		"                 Specify twice to be even more silent.\n"
+		"  --help, -h, -? Print this help.\n"
+		"  -           A single dash reads cell_definition from stdin,\n"
+		"              line by line or in one line, separated by blanks.\n"
+		"              Use io-redirection to read from a file.\n"
+		"  cell_definitions on the command line are applied after and\n"
+		"  override those read from file.\n"
 		"\n"
-		"    preset_fields can be given in these formats:\n"
+		"  cell_definition can be given in these formats:\n"
 		"\n"
-		"    #anything   Preset option ignored if starting with #.\n"
-		"    rcn         Three digits for row, column and number.\n"
-		"                Each must be in range 1..9\n"
-		"                Sets number n in cell [row,column].\n"
-		"                Example: '123' sets 3 to cell[1,2].\n"
-		"    rc:n        Same as rcn\n"
-		"                Example: '12:3' sets 3 to cell[1,2].\n"
-		"    r:nnnnnnnnn 9 digits to define the complete row given by r.\n"
-		"                A 0 and each non-digit means empty cell.\n"
-		"                Example: '4:2..000..8' is the same as 412 498.\n"
-		"    nnnnnnnnn   9 Digits defining the complete 'next' row.\n"
-		"                Fills row 1 if used as first preset option.\n"
+		"  #anything   Preset option ignored if starting with #.\n"
+		"  rcn         Three digits for row, column and number.\n"
+		"              Each must be in range 1..9\n"
+		"              Sets number n in cell [row,column].\n"
+		"              Example: '123' sets 3 to cell[1,2].\n"
+		"  rc:n        Same as rcn\n"
+		"              Example: '12:3' sets 3 to cell[1,2].\n"
+		"  r:nnnnnnnnn 9 digits to define the complete row given by r.\n"
+		"              A 0 and each non-digit means empty cell.\n"
+		"              Example: '4:2..000..8' is the same as 412 498.\n"
+		"  nnnnnnnnn   9 Digits defining the complete 'next' row\n"
+		"              starting with row 1. In a file you typically\n"
+		"              use 9 lines like this to define all cells.\n"
+		"  81 digits   Exactly 81 digits define all cells at once.\n"
 		"\n"
-		"Example of minimal sodoku with 17 cells preset having one solution:\n"
+		"Example of minimal sodoku with 17 preset cells:\n"
 		"  181 214 322 455 474 497 538 573 631 659 713 744 772 825 841 948 966\n"
 		, prog);
 }
@@ -137,7 +142,11 @@ int main(int argc, char** argv)
 		}
 	}
 
-	if (found >= find_max) {
+	if (find_max < 1) {
+		printf("No solution requested. The matrix is:\n");
+		print_matrix();
+	}
+	else if (found >= find_max) {
 		if (silent == 1) {
 			printf("Solution #%d found:\n", found);
 			print_matrix();
