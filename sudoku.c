@@ -17,6 +17,7 @@ bool advance_cell(int i, int j);
 bool solve_sudoku(int found);
 void init_bits(void);
 void print_matrix(void);
+void print_best_matrix(void);
 void print_separator(void);
 
 /* The Sudoku matrix itself. */
@@ -24,6 +25,15 @@ int matrix[9][9];
 
 /* Which numbers were given as known in the problem. */
 int known[9][9];
+
+/* If no solution, best_matrix has the most cells filled. */
+int best_matrix[9][9];
+
+/* Number of cell filled in best_matrix. */
+int best_pos = 0;
+
+/* Number of best_matrix of best_pos found. */
+int best_pos_count = 0;
 
 /* An array of nine integers, each of which representing a sub-square.
 Each integer has its nth-bit on iff n belongs to the corresponding sub-square. */
@@ -142,8 +152,14 @@ int main(int argc, char** argv)
 		printf("Found %d. No more solutions exist.\n", found);
 	}
 	else {
-		printf("No solution found:\n");
-		print_matrix();
+		if (best_pos_count > 0) {
+			printf("No solution found. Mostly filled matrix (%d times):\n", best_pos_count);
+			print_best_matrix();
+		}
+		else {
+			printf("No solution found:\n");
+			print_matrix();
+		}
 	}
 
     return EXIT_SUCCESS;
@@ -368,6 +384,16 @@ bool solve_sudoku(int found)
         }
         if (advance_cell(pos/9, pos%9)) {
             ++pos;
+
+			if (pos > best_pos) {
+				memcpy(best_matrix, matrix, sizeof(matrix));
+				best_pos = pos;
+				best_pos_count = 1;
+			}
+			else if (pos == best_pos) {
+				best_pos_count++;
+			}
+
         } else {
             do {
                 --pos;
@@ -387,16 +413,14 @@ void init_bits(void)
     }
 }
 
-/* Prints the matrix using some ANSI escape sequences
-to distinguish the originally known numbers. */
-void print_matrix(void)
+void print_mat(int mat[9][9])
 {
     for (int i = 0; i < 9; ++i) {
         if ((i % 3) == 0) {
             print_separator();
         }
         for (int j = 0; j < 9; j++) {
-            int cell = matrix[i][j];
+            int cell = mat[i][j];
             if ((j % 3) == 0) {
                 printf("|");
             }
@@ -409,6 +433,17 @@ void print_matrix(void)
         printf("|\n");
     }
     print_separator();
+}
+
+/* Prints the matrix using some ANSI escape sequences
+to distinguish the originally known numbers. */
+void print_matrix(void)
+{
+	print_mat(matrix);
+}
+void print_best_matrix(void)
+{
+	print_mat(best_matrix);
 }
 
 /* Utility to print lines and crosses, used by print_matrix. */
