@@ -86,8 +86,8 @@ void print_usage()
 		"    nnnnnnnnn   9 Digits defining the complete 'next' row.\n"
 		"                Fills row 1 if used as first preset option.\n"
 		"\n"
-		"Example (a preset that usually is difficult to solve for humans):\n"
-		"  118 233 246 327 359 372 425 467 554 565 577 641 683 731 786 798 838 845 881 929 975\n"
+		"Example of minimal sodoku with 17 cells preset having one solution:\n"
+		"  181 214 322 455 474 497 538 573 631 659 713 744 772 825 841 948 966\n"
 		, prog);
 }
 
@@ -106,11 +106,11 @@ int main(int argc, char** argv)
 	int next_row = 0;
 	if (argc > 0 && !strcmp(argv[0], "-")) {
 		argv++; argc--;
-		char line[256], *pl[1] = { line }, *tokctx;
+		char line[256], *tokctx;
 		while (fgets(line, sizeof(line) - 1, stdin)) {
 			char *preset = strtok_s(line, " \r\n", &tokctx);
 			while (preset) {
-				next_row = init_known(1, pl, next_row);
+				next_row = init_known(1, &preset, next_row);
 				if (next_row < 0) {
 					print_matrix();
 					exit(EXIT_FAILURE);
@@ -272,6 +272,28 @@ int init_known(int count, const char** cells, int next_row)
         int j, n, m;
 		if (cell[0] == '#')	// commented out - ignore this preset.
 			continue;
+		if (!strchr(cell, ':') && strlen(cell) == 81) {
+			// preset the complete 81 cells of the matrix
+			for (i = 0; i < 9; ++i) {
+				for (j = 0; j < 9; ++j) {
+					m = clear_cell(i, j);
+					if (m != 0)
+						fprintf(stderr, "token #%d \"%s\": overwrites %d at [%d,%d]\n", c + 1, cell, m, i + 1, j + 1);
+				}
+			}
+			for (m = 0; m < 81; m++) {
+				i = m / 9; j = m % 9;
+				n = cell[m] - '0';
+				if (n < 0 || n > 9)		// treat everything except digits as 0
+					n = 0;
+				if (n != 0 && !set_cell(i, j, n)) {
+					fprintf(stderr, "token #%d \"%s\": setting %d at [%d,%d] breaks rules\n", c + 1, cell, n, i + 1, j + 1);
+					nerr++;
+				}
+				known[i][j] = n != 0;
+			}
+			continue;
+		}
 		if (!strchr(cell, ':') && strlen(cell) == 9) {
 			// preset the complete "next" row i
 			row = cell;
@@ -306,7 +328,7 @@ int init_known(int count, const char** cells, int next_row)
 				if (m != 0)
 					fprintf(stderr, "token #%d \"%s\": overwrites %d at [%d,%d]\n", c + 1, cell, m, i + 1, j + 1);
 				if (n != 0 && !set_cell(i, j, n)) {
-					fprintf(stderr, "token #%d \"%s\": setting %d breaks rules\n", c + 1, cell, n);
+					fprintf(stderr, "token #%d \"%s\": setting %d at [%d,%d] breaks rules\n", c + 1, cell, n, i + 1, j + 1);
 					nerr++;
 				}
 				known[i][j] = n != 0;
@@ -330,7 +352,7 @@ int init_known(int count, const char** cells, int next_row)
 			if (m != 0)
 				fprintf(stderr, "token #%d \"%s\": overwrites %d at [%d,%d]\n", c+1, cell, m, i+1, j+1);
 			if (n != 0 && !set_cell(i, j, n)) {
-				fprintf(stderr, "token #%d \"%s\": setting %d breaks rules\n", c+1, cell, n);
+				fprintf(stderr, "token #%d \"%s\": setting %d at [%d,%d] breaks rules\n", c + 1, cell, n, i + 1, j + 1);
 				nerr++;
 			}
             known[i][j] = n != 0;
