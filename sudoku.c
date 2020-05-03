@@ -1,5 +1,7 @@
 /**
  * Command line interface sudoku solver.
+ * Based on code from "fxn" (https://github.com/fxn/sudoku)
+ * Enhancements by "yablacky"
  */
 
 #include <stdlib.h>
@@ -8,7 +10,7 @@
 #include <stdbool.h>
 
 int parse_options(int argc, char **argv);
-int sqare_idx(int i, int j);
+int square(int i, int j);
 bool set_cell(int i, int j, int n);
 int clear_cell(int i, int j);
 int init_known(int count, const char** cells, int next_row);
@@ -236,7 +238,7 @@ int parse_options(int argc, char **argv)
 }
 
 /* Returns the index of the square the cell (i, j) belongs to. */
-int sqare_idx(int i, int j)
+int square(int i, int j)
 {
     return (i/3)*3 + j/3;
 }
@@ -253,7 +255,7 @@ bool set_cell(int i, int j, int n)
     matrix[i][j] = n;
     rows[i] |= bits[n];
     cols[j] |= bits[n];
-    squares[sqare_idx(i, j)] |= bits[n];
+    squares[square(i, j)] |= bits[n];
 	return true;
 }
 
@@ -265,7 +267,7 @@ int clear_cell(int i, int j)
     matrix[i][j] = 0;
     rows[i] &= ~bits[n];
     cols[j] &= ~bits[n];
-    squares[sqare_idx(i, j)] &= ~bits[n];
+    squares[square(i, j)] &= ~bits[n];
     return n;
 }
 
@@ -376,7 +378,7 @@ int init_known(int count, const char** cells, int next_row)
 /* Can we put n in the cell (i, j)? */
 bool can_set(int i, int j, int n)
 {
-    return (rows[i] & bits[n]) == 0 && (cols[j] & bits[n]) == 0 && (squares[sqare_idx(i, j)] & bits[n]) == 0;
+    return (rows[i] & bits[n]) == 0 && (cols[j] & bits[n]) == 0 && (squares[square(i, j)] & bits[n]) == 0;
 }
 
 /* Tries to fill the cell (i, j) with the next available number.
