@@ -110,11 +110,22 @@ int main(int argc, char** argv)
     }
     argv += nn; argc -= nn;
 
+    // Initialize the matrix
+
     int next_row = 0;
     if (argc > 0 && !strcmp(argv[0], "-")) {
         argv++; argc--;
-        char line[256], *tokctx;
+
+		// Read cell definitions from file
+
+		char line[256], *tokctx;
         while (fgets(line, sizeof(line) - 1, stdin)) {
+			if (line[0] == '#' && !(line[1] >= '0' && line[1] <= '9')) {
+				// This comment applies to the complete line - with a digit
+				// it could be a single commented out cell definition with
+				// more (not commented out) cell definitions beind it.
+                continue;
+            }
             char *preset = strtok_s(line, " \r\n", &tokctx);
             while (preset) {
                 next_row = init_known(1, &preset, next_row);
@@ -132,6 +143,8 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
+    // Find solutions
+
     int found = 0;
     while (found < find_max && solve_sudoku(found)) {
         found++;
@@ -143,6 +156,8 @@ int main(int argc, char** argv)
             printf("Found %d\r", found);
         }
     }
+
+    // Print the result
 
     if (find_max < 1) {
         printf("No solution requested. The matrix is:\n");
