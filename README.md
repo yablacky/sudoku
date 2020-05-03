@@ -56,4 +56,46 @@ This is the puzzle that a Finnish mathematician [claims to be the hardest one kn
 
 The exact milliseconds vary a little between runs, but those are the magnitudes. Those examples ran in my MacBook Air 11'' mid-2012, with a dual core i7 (Ivy Bridge).
 
-Since this was an exercise control error of the arguments is totally primitive. Basically, you either enter the right stuff or else get a segmentation fault.
+The validity of command line parameters is checked. In particular it is not possible to specify a puzzle that breaks the Sudoku rules.
+
+The puzzle cells can now be specified in various ways:
+
+    rcn         Three digits define a single cell in (above mentioned) row-column-number
+                format ("234" puts 4 to row 2/column 3).
+                r and c must be in range 1..9; n in range 0..9 where 0 is empty cell.
+    rc:n        Same as rcn
+    r:nnnnnnnnn Nine digits define the row given by r.
+    nnnnnnnnn   Nine digits define the "next" row, starting at row 1.
+                If reading a puzzle from stdin you typically enter 9 of such lines.
+    81 digits   81 digits define the complete puzzle at once.
+    #anything   A leading # marks a cell definition as comment.
+
+A single dash (-) as 1st cell definition reads definitions from stdin, line by line and in one line separated by blanks. Lines starting with # and empty lines are ignored. The cell definitions on the command line are applied afterwards (and modify the puzzle from file before solving it).
+
+If file _my.sudoku_ contains cell definitions like this:
+
+    # This is a minimal 17-cell sudoku puzzle
+    000000010
+    400000000
+    020000000
+    000050407
+    008000300
+    001090000
+    300400200
+    050100000
+    000806000
+
+This will read and solve it:
+
+    sudoku - <my.sudoku
+    
+This will read it, clears number 4 in 2nd row, replace number 1 on 1st row by 2 and then solve it:
+
+    sudoku - 210 182 <my.sudoku
+
+If a puzzle has more than one solution all of them can be found, see _--max_ option. By default the solver looks for a 2nd solution because it is an interesting information if a puzzle has exactly one solution.
+
+If you are interested in number of solutions and not in solutions itself then the solver can run silent, not printing all the solutions. See _--silent_ option.
+
+Finally there is a _--help_ option available.
+
