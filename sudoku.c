@@ -126,14 +126,14 @@ int main(int argc, char** argv)
                 // more (not commented out) cell definitions beind it.
                 continue;
             }
-            char *preset = strtok_s(line, " \r\n", &tokctx);
+            char *preset = strtok_s(line, " \t\r\n", &tokctx);
             while (preset) {
                 next_row = init_known(1, &preset, next_row);
                 if (next_row < 0) {
                     print_matrix();
                     exit(EXIT_FAILURE);
                 }
-                preset = strtok_s(NULL, " \r\n", &tokctx);
+                preset = strtok_s(NULL, " \t\r\n", &tokctx);
             }
         }
     }
