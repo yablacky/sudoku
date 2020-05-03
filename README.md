@@ -97,5 +97,7 @@ If a puzzle has more than one solution all of them can be found, see _--max_ opt
 
 If you are interested in number of solutions and not in solutions itself then the solver can run silent, not printing all the solutions. See _--silent_ option.
 
+If no solution exists, a _mostly filled puzzle_ is printed. This may be interesting to figure out, why no solution exists.
+
 Finally there is a _--help_ option available.
 
