@@ -1,7 +1,7 @@
 /**
  * Command line interface sudoku solver.
  * Based on code from "fxn" (https://github.com/fxn/sudoku)
- * Enhancements by "yablacky"
+ * Enhancements by "yablacky" (https://github.com/yablacky/sudoku)
  */
 
 #include <stdlib.h>
@@ -80,8 +80,8 @@ void print_usage()
 		"\n"
 		"  #anything   Preset option ignored if starting with #.\n"
 		"  rcn         Three digits for row, column and number.\n"
-		"              Each must be in range 1..9\n"
 		"              Sets number n in cell [row,column].\n"
+		"              r and c must be in range 1..9. n in range 0..9.\n"
 		"              Example: '123' sets 3 to cell[1,2].\n"
 		"  rc:n        Same as rcn\n"
 		"              Example: '12:3' sets 3 to cell[1,2].\n"
@@ -176,6 +176,8 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
 }
 
+/* Parse command line options, setup global variables.
+Return the number of args eaten. A value < 0 indicates error (-2 for usage). */
 int parse_options(int argc, char **argv)
 {
 	int argc0 = argc;
@@ -446,6 +448,7 @@ void init_bits(void)
     }
 }
 
+/* Print the puzzle given as parameter. Originally known numbers are wrapped in parenthesis. */
 void print_mat(int mat[9][9])
 {
     for (int i = 0; i < 9; ++i) {
@@ -468,8 +471,7 @@ void print_mat(int mat[9][9])
     print_separator();
 }
 
-/* Prints the matrix using some ANSI escape sequences
-to distinguish the originally known numbers. */
+/* Prints the matrix. */
 void print_matrix(void)
 {
 	print_mat(matrix);
