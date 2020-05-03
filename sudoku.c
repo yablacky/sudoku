@@ -18,6 +18,7 @@ bool can_set(int i, int j, int n);
 bool advance_cell(int i, int j);
 bool solve_sudoku(int found);
 void init_bits(void);
+int bits_on(int n);
 void print_matrix(void);
 void print_best_matrix(void);
 void print_separator(void);
@@ -27,6 +28,9 @@ int matrix[9][9];
 
 /* Which numbers were given as known in the problem. */
 int known[9][9];
+
+/* Where to start solving. */
+int start_pos = 0;
 
 /* If no solution, best_matrix has the most cells filled. */
 int best_matrix[9][9];
@@ -141,6 +145,16 @@ int main(int argc, char** argv)
     if (init_known(argc, argv, next_row) < 0) {
         print_matrix();
         exit(EXIT_FAILURE);
+    }
+
+    // Optimize solver.
+
+    for (next_row = 0; next_row < 9; ++next_row) {
+        // Prevent starting in a row with few or even no (worst case)
+        // cells known because backtracking would try all the possibilities.
+        if (bits_on(rows[next_row]) > bits_on(rows[start_pos / 9])) {
+            start_pos = next_row * 9;
+        }
     }
 
     // Find solutions
@@ -412,45 +426,52 @@ bool advance_cell(int i, int j)
 }
 
 /* The main function, a fairly generic backtracking algorithm. */
+
 bool solve_sudoku(int found)
 {
-    int pos = 0;
+    int pos = start_pos, filled_pos = 0;	// note that start_pos must not change between calls.
     if (found > 0) {
         // Assume the board has all cells set; find next solution.
-        pos = 80;
-        while (pos >= 0 && known[pos/9][pos%9]) {
-            --pos;
-        }
-        if (pos < 0) {    // all cells are known cells...
-            return false;
+        pos = start_pos - 1;
+        if (pos < 0) pos = 80;
+        while (known[pos/9][pos%9]) {
+            if (--pos < 0) pos = 80;
+            if (pos == start_pos) {    // all cells are known cells...
+                return false;
+            }
         }
     }
     while (1) {
-        while (pos < 81 && known[pos/9][pos%9]) {
-            ++pos;
-        }
-        if (pos >= 81) {
-            return true;    // All cells set: solution found; may be there are more...
+        while (known[pos/9][pos%9]) {
+            if (++pos >= 81) pos = 0;
+            if (pos == start_pos) {
+                return true;    // All cells set: solution found; may be there are more...
+            }
         }
         if (advance_cell(pos/9, pos%9)) {
-            ++pos;
 
-            if (pos > best_pos) {
+            ++filled_pos;
+            if (filled_pos > best_pos) {
                 memcpy(best_matrix, matrix, sizeof(matrix));
-                best_pos = pos;
+                best_pos = filled_pos;
                 best_pos_count = 1;
             }
-            else if (pos == best_pos) {
+            else if (filled_pos == best_pos) {
                 best_pos_count++;
             }
 
+            if (++pos >= 81) pos = 0;
+            if (pos == start_pos) {
+                return true;    // All cells set: solution found; may be there are more...
+            }
         } else {
             do {
-                --pos;
-            } while (pos >= 0 && known[pos/9][pos%9]);
-            if (pos < 0) {
-                return false; // No solution found
-            }
+                if (pos == start_pos) {
+                    return false; // No solution found
+                }
+                if (--pos < 0) pos = 80;
+            } while (known[pos/9][pos%9]);
+            --filled_pos;
         }
     }
 }
@@ -461,6 +482,21 @@ void init_bits(void)
     for (int n = 1; n < 10; n++) {
         bits[n] = 1 << n;
     }
+}
+
+/* Return number of on (1) bits in the value passed. */
+int bits_on(int n)
+{
+    static const int nibble[] = {   0, 1, 1, 2,
+                                    1, 2, 2, 3,
+                                    1, 2, 2, 3,
+                                    2, 3, 3, 4 };
+    unsigned int un = (unsigned int)n;
+    int m = nibble[un & 15];
+    while (un >>= 4) {
+        m += nibble[un & 15];
+    }
+    return m;
 }
 
 /* Print the puzzle given as parameter. Originally known numbers are wrapped in parenthesis. */
