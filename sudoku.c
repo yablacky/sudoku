@@ -22,12 +22,19 @@ int bits_on(int n);
 void print_matrix(void);
 void print_best_matrix(void);
 void print_separator(void);
+void swap_rows(int a, int b);
 
 /* The Sudoku matrix itself. */
 int matrix[9][9];
 
 /* Which numbers were given as known in the problem. */
 int known[9][9];
+
+/* map current matrix rows and cols to the original puzzle matrix */
+int row_order[9] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+int col_order[9] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+
+#define SWAP(a,b) do { auto t = a; a = b; b = t; } while(0)
 
 /* Where to start solving. */
 int start_pos = 0;
@@ -149,6 +156,23 @@ int main(int argc, char** argv)
 
     // Optimize solver.
 
+	for (next_row = 3; next_row < 7; next_row += 3) {
+		if (bits_on(rows[next_row + 0]) +
+			bits_on(rows[next_row + 1]) +
+			bits_on(rows[next_row + 2]) >
+			bits_on(rows[0]) +
+			bits_on(rows[1]) +
+			bits_on(rows[2])
+			)
+			swap_rows(0, next_row);
+	}
+	for (next_row = 1; next_row < 3; next_row ++) {
+		if (bits_on(rows[next_row]) >
+			bits_on(rows[0]))
+			swap_rows(0, next_row);
+	}
+
+	if (0)
     for (next_row = 0; next_row < 9; ++next_row) {
         // Prevent starting in a row with few or even no (worst case)
         // cells known because backtracking would try all the possibilities.
@@ -503,15 +527,18 @@ int bits_on(int n)
 void print_mat(int mat[9][9])
 {
     for (int i = 0; i < 9; ++i) {
+		int ii = 0;
+		while (row_order[ii] != i)
+			ii++;
         if ((i % 3) == 0) {
             print_separator();
         }
         for (int j = 0; j < 9; j++) {
-            int cell = mat[i][j];
+            int cell = mat[ii][j];
             if ((j % 3) == 0) {
                 printf("|");
             }
-            if (known[i][j]) {
+            if (known[ii][j]) {
                 printf("(%d)", cell);
             } else {
                 printf(" %d ", cell);
@@ -540,3 +567,36 @@ void print_separator(void)
     }
     printf("+\n");
 }
+
+void swap_rows_unchecked(int a, int b)
+{
+	int t[9];
+	memcpy(t, matrix[a], sizeof(t));
+	memcpy(matrix[a], matrix[b], sizeof(t));
+	memcpy(matrix[b], t, sizeof(t));
+
+	memcpy(t, known[a], sizeof(t));
+	memcpy(known[a], known[b], sizeof(t));
+	memcpy(known[b], t, sizeof(t));
+
+	SWAP(rows[a], rows[b]);
+	SWAP(row_order[a], row_order[b]);
+}
+
+void swap_rows(int a, int b)
+{
+	if (a / 3 != b / 3) {
+		// do not share the same squares. Must swap three rows
+		a = (a / 3) * 3;
+		b = (b / 3) * 3;
+		swap_rows_unchecked(a + 0, b + 0);
+		swap_rows_unchecked(a + 1, b + 1);
+		swap_rows_unchecked(a + 2, b + 2);
+		SWAP(squares[a + 0], squares[b + 0]);
+		SWAP(squares[a + 1], squares[b + 1]);
+		SWAP(squares[a + 2], squares[b + 2]);
+		return;
+	}
+	swap_rows_unchecked(a, b);
+}
+
