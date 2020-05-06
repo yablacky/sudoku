@@ -53,7 +53,7 @@ int rows[9];
 Each integer has its nth-bit on iff n belongs to the corresponding column. */
 int cols[9];
 
-#define BITS(n) (1 << (n))
+#define BITAT(n) (1 << (n))
 
 /* Number of solutions to search for in case there are more than one */
 int find_max = 2;
@@ -288,9 +288,9 @@ bool set_cell(int i, int j, int n)
 void set_cell_unchecked(int i, int j, int n)
 {
     matrix[i][j] = n;
-    rows[i] |= BITS(n);
-    cols[j] |= BITS(n);
-    squares[square(i, j)] |= BITS(n);
+    rows[i] |= BITAT(n);
+    cols[j] |= BITAT(n);
+    squares[square(i, j)] |= BITAT(n);
 }
 
 /* Clears the cell (i, j) and turns off the corresponding bits in rows, cols,
@@ -299,9 +299,9 @@ int clear_cell(int i, int j)
 {
     int n = matrix[i][j];
     matrix[i][j] = 0;
-    rows[i] &= ~BITS(n);
-    cols[j] &= ~BITS(n);
-    squares[square(i, j)] &= ~BITS(n);
+    rows[i] &= ~BITAT(n);
+    cols[j] &= ~BITAT(n);
+    squares[square(i, j)] &= ~BITAT(n);
     return n;
 }
 
@@ -414,7 +414,7 @@ int init_known(int count, const char** cells, int next_row)
 /* Can we put n in the cell (i, j)? */
 bool can_set(int i, int j, int n)
 {
-    return (rows[i] & BITS(n)) == 0 && (cols[j] & BITS(n)) == 0 && (squares[square(i, j)] & BITS(n)) == 0;
+    return (rows[i] & BITAT(n)) == 0 && (cols[j] & BITAT(n)) == 0 && (squares[square(i, j)] & BITAT(n)) == 0;
 }
 
 /* Tries to fill the cell (i, j) with the next available number.
