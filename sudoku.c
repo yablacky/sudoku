@@ -18,6 +18,8 @@ int init_known(int count, const char** cells, int next_row);
 bool can_set(int i, int j, int n);
 bool advance_cell(int i, int j);
 bool solve_sudoku(int found);
+void init_bits();
+int find_first_on(int n);
 int bits_on(int n);
 void print_matrix(void);
 void print_best_matrix(void);
@@ -53,7 +55,14 @@ int rows[9];
 Each integer has its nth-bit on iff n belongs to the corresponding column. */
 int cols[9];
 
+/* Return value where bit at position n is 1 */
 #define BITAT(n) (1 << (n))
+
+/* Return value with all bits from position 0 up to (including) position n are all 1 */
+#define BITSTO(n) (BITAT((n) + 1) - 1)
+
+/* position of the first (rightmost) zero bit. */
+int first_0bit[BITSTO(9) + 1];
 
 /* Number of solutions to search for in case there are more than one */
 int find_max = 2;
@@ -104,6 +113,8 @@ void print_usage()
 int main(int argc, char** argv)
 {
     prog = *argv++; argc--;
+
+    init_bits();
 
     int nn = parse_options(argc, argv);
     if (nn < 0) {
@@ -423,16 +434,16 @@ bool advance_cell(int i, int j)
 {
     int n = clear_cell(i, j);
     int z = rows[i] | cols[j] | squares[square(i, j)];
-    z ^= ((1 << 9) - 1) << 1;    // ones for possible numbers (not present in row, col, square)
-    z >>= n; // eleminate numbers up to n we tried already
-    while (z >>= 1) {
-        ++n;
-        if (z & 1) {
-            set_cell_unchecked(i, j, n);
-            return true;
-        }
+    z |= BITSTO(n);        // add 1-bits for numbers we already tried and for 0
+    if (z == BITSTO(9)) {
+        return false;
     }
-    return false;
+    // The position of 1st 0-bit in z is number to try next.
+    // Instead of searching for the zero in loop right here,
+    // we lookup the position in our pre-calculated table:
+    n = first_0bit[z];
+    set_cell_unchecked(i, j, n);
+    return true;
 }
 
 /* The main function, a fairly generic backtracking algorithm. */
@@ -541,4 +552,20 @@ void print_separator(void)
         printf("+---------");
     }
     printf("+\n");
+}
+
+/* Return position of first 1-bit (the rightmost, least significant 1-bit) or -1 for zero*/
+int find_first_on(int n)
+{
+    for (int m = 0; m < sizeof(n) * 8; ++m)
+        if (n & (1 << m))
+            return m;
+    return -1;
+}
+
+/* Initialize lookup tables. */
+void init_bits()
+{
+    for (int n = 0; n < _countof(first_0bit); ++n)
+        first_0bit[n] = find_first_on(~n);
 }
