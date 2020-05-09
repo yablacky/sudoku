@@ -12,12 +12,14 @@
 int parse_options(int argc, char **argv);
 int square(int i, int j);
 bool set_cell(int i, int j, int n);
+void set_cell_unchecked(int i, int j, int n);
 int clear_cell(int i, int j);
 int init_known(int count, const char** cells, int next_row);
 bool can_set(int i, int j, int n);
 bool advance_cell(int i, int j);
 bool solve_sudoku(int found);
-void init_bits(void);
+void init_bits();
+int find_first_on(int n);
 int bits_on(int n);
 void print_matrix(void);
 void print_best_matrix(void);
@@ -60,8 +62,14 @@ int rows[9];
 Each integer has its nth-bit on iff n belongs to the corresponding column. */
 int cols[9];
 
-/* An array with some powers of 2 to avoid shifting all the time. */
-int bits[10];
+/* Return value where bit at position n is 1 */
+#define BITAT(n) (1 << (n))
+
+/* Return value with all bits from position 0 up to (including) position n are all 1 */
+#define BITSTO(n) (BITAT((n) + 1) - 1)
+
+/* position of the first (rightmost) zero bit. */
+int first_0bit[BITSTO(9) + 1];
 
 /* Number of solutions to search for in case there are more than one */
 int find_max = 2;
@@ -304,14 +312,20 @@ Return success status.
 */
 bool set_cell(int i, int j, int n)
 {
-    if (! can_set(i, j, n)) {
+    if (!can_set(i, j, n)) {
         return false;
     }
-    matrix[i][j] = n;
-    rows[i] |= bits[n];
-    cols[j] |= bits[n];
-    squares[square(i, j)] |= bits[n];
+    set_cell_unchecked(i, j, n);
     return true;
+}
+
+/* Set cell(i,j) to n. Caller must check rules. */
+void set_cell_unchecked(int i, int j, int n)
+{
+    matrix[i][j] = n;
+    rows[i] |= BITAT(n);
+    cols[j] |= BITAT(n);
+    squares[square(i, j)] |= BITAT(n);
 }
 
 /* Clears the cell (i, j) and turns off the corresponding bits in rows, cols,
@@ -320,9 +334,9 @@ int clear_cell(int i, int j)
 {
     int n = matrix[i][j];
     matrix[i][j] = 0;
-    rows[i] &= ~bits[n];
-    cols[j] &= ~bits[n];
-    squares[square(i, j)] &= ~bits[n];
+    rows[i] &= ~BITAT(n);
+    cols[j] &= ~BITAT(n);
+    squares[square(i, j)] &= ~BITAT(n);
     return n;
 }
 
@@ -343,8 +357,9 @@ int init_known(int count, const char** cells, int next_row)
             for (i = 0; i < 9; ++i) {
                 for (j = 0; j < 9; ++j) {
                     m = clear_cell(i, j);
-                    if (m != 0)
+                    if (m != 0) {
                         fprintf(stderr, "token #%d \"%s\": overwrites %d at [%d,%d]\n", c + 1, cell, m, i + 1, j + 1);
+                    }
                 }
             }
             for (m = 0; m < 81; m++) {
@@ -372,7 +387,7 @@ int init_known(int count, const char** cells, int next_row)
         else if (sscanf_s(cell, "%1d:%n%1c", &i, &n, &r, 1) == 2) {
             // preset the complete specified row
             if (i < 1 || i > 9) {
-                fprintf(stderr, "token #%d \"%s\": bad row %d\n", c+1, cell, i);
+                fprintf(stderr, "token #%d \"%s\": bad row %d\n", c + 1, cell, i);
                 nerr++;
                 continue;
             }
@@ -401,29 +416,30 @@ int init_known(int count, const char** cells, int next_row)
             }
         }
         else if (sscanf_s(cell, "%1d%1d%1d%1c", &i, &j, &n, &r, 1) == 3 ||
-                 sscanf_s(cell, "%1d%1d:%1d%1c", &i, &j, &n, &r, 1) == 3) {
+            sscanf_s(cell, "%1d%1d:%1d%1c", &i, &j, &n, &r, 1) == 3) {
             // preset a given cell
             if (i < 1 || i > 9) {
-                fprintf(stderr, "token #%d \"%s\": bad row %d\n", c+1, cell, i);
+                fprintf(stderr, "token #%d \"%s\": bad row %d\n", c + 1, cell, i);
                 nerr++;
                 continue;
             }
             if (j < 1 || j > 9) {
-                fprintf(stderr, "token #%d \"%s\": bad column %d\n", c+1, cell, j);
+                fprintf(stderr, "token #%d \"%s\": bad column %d\n", c + 1, cell, j);
                 nerr++;
                 continue;
             }
             i--, j--;
             m = clear_cell(i, j);
             if (m != 0)
-                fprintf(stderr, "token #%d \"%s\": overwrites %d at [%d,%d]\n", c+1, cell, m, i+1, j+1);
+                fprintf(stderr, "token #%d \"%s\": overwrites %d at [%d,%d]\n", c + 1, cell, m, i + 1, j + 1);
             if (n != 0 && !set_cell(i, j, n)) {
                 fprintf(stderr, "token #%d \"%s\": setting %d at [%d,%d] breaks rules\n", c + 1, cell, n, i + 1, j + 1);
                 nerr++;
             }
             known[i][j] = n != 0;
-        } else {
-            fprintf(stderr, "token #%d: \"%s\": bad format\n", c+1, cell);
+        }
+        else {
+            fprintf(stderr, "token #%d: \"%s\": bad format\n", c + 1, cell);
             nerr++;
         }
     }
@@ -433,7 +449,7 @@ int init_known(int count, const char** cells, int next_row)
 /* Can we put n in the cell (i, j)? */
 bool can_set(int i, int j, int n)
 {
-    return (rows[i] & bits[n]) == 0 && (cols[j] & bits[n]) == 0 && (squares[square(i, j)] & bits[n]) == 0;
+    return (rows[i] & BITAT(n)) == 0 && (cols[j] & BITAT(n)) == 0 && (squares[square(i, j)] & BITAT(n)) == 0;
 }
 
 /* Tries to fill the cell (i, j) with the next available number.
@@ -441,19 +457,24 @@ Returns a flag to indicate if it succeeded. */
 bool advance_cell(int i, int j)
 {
     int n = clear_cell(i, j);
-    while (++n <= 9) {
-        if (set_cell(i, j, n)) {
-            return true;
-        }
+    int z = rows[i] | cols[j] | squares[square(i, j)];
+    z |= BITSTO(n);        // add 1-bits for numbers we already tried and for 0
+    if (z == BITSTO(9)) {
+        return false;
     }
-    return false;
+    // The position of 1st 0-bit in z is number to try next.
+    // Instead of searching for the zero in loop right here,
+    // we lookup the position in our pre-calculated table:
+    n = first_0bit[z];
+    set_cell_unchecked(i, j, n);
+    return true;
 }
 
 /* The main function, a fairly generic backtracking algorithm. */
 
 bool solve_sudoku(int found)
 {
-    int pos = start_pos, filled_pos = 0;	// note that start_pos must not change between calls.
+    int pos = start_pos, filled_pos = 0;    // note that start_pos must not change between calls.
     if (found > 0) {
         // Assume the board has all cells set; find next solution.
         pos = start_pos - 1;
@@ -497,14 +518,6 @@ bool solve_sudoku(int found)
             } while (known[pos/9][pos%9]);
             --filled_pos;
         }
-    }
-}
-
-/* Initializes the array with powers of 2. */
-void init_bits(void)
-{
-    for (int n = 1; n < 10; n++) {
-        bits[n] = 1 << n;
     }
 }
 
@@ -600,3 +613,18 @@ void swap_rows(int a, int b)
 	swap_rows_unchecked(a, b);
 }
 
+/* Return position of first 1-bit (the rightmost, least significant 1-bit) or -1 for zero*/
+int find_first_on(int n)
+{
+    for (int m = 0; m < sizeof(n) * 8; ++m)
+        if (n & (1 << m))
+            return m;
+    return -1;
+}
+
+/* Initialize lookup tables. */
+void init_bits()
+{
+    for (int n = 0; n < _countof(first_0bit); ++n)
+        first_0bit[n] = find_first_on(~n);
+}
