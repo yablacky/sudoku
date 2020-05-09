@@ -472,7 +472,11 @@ bool solve_sudoku(int found)
         // Assume the board has all cells set; find next solution.
         pos = start_pos - 1;
         if (pos < 0) pos = 80;
-        while (known[pos/9][pos%9]) {
+		// The "correct" code would be:
+        // while (known[pos / 9][pos % 9]) {
+		// But this uses expensive divide and modulo operations and the result
+		// is just the same as this:
+        while (known[0][pos]) {
             if (--pos < 0) pos = 80;
             if (pos == start_pos) {    // all cells are known cells...
                 return false;
@@ -480,7 +484,8 @@ bool solve_sudoku(int found)
         }
     }
     while (1) {
-        while (known[pos/9][pos%9]) {
+        // while (known[pos / 9][pos % 9]) {	// see "correct" code comment above.
+        while (known[0][pos]) {
             if (++pos >= 81) pos = 0;
             if (pos == start_pos) {
                 return true;    // All cells set: solution found; may be there are more...
@@ -517,8 +522,9 @@ bool solve_sudoku(int found)
                     return false; // No solution found
                 }
                 if (--pos < 0) pos = 80;
-            } while (known[pos/9][pos%9]);
-            --filled_pos;
+            } while (known[0][pos]);
+            // } while (known[pos / 9][pos % 9]);	// see "correct" code comment above.
+        --filled_pos;
         }
     }
 }
