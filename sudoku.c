@@ -25,6 +25,7 @@ void print_matrix(void);
 void print_best_matrix(void);
 void print_separator(void);
 void swap_rows(int a, int b);
+void print_trace(char *info);
 
 /* The Sudoku matrix itself. */
 int matrix[9][9];
@@ -49,6 +50,13 @@ int best_pos = 0;
 
 /* Number of best_matrix of best_pos found. */
 int best_pos_count = 0;
+
+/* Just for information */
+unsigned int total_moves = 0;
+unsigned int best_pos_try_count = 0;
+
+/* print matrix after each move */
+int trace_moves = 0;
 
 /* An array of nine integers, each of which representing a sub-square.
 Each integer has its nth-bit on iff n belongs to the corresponding sub-square. */
@@ -88,6 +96,7 @@ void print_usage()
         "                 Do not search more solutions than this.\n"
         "  --silent, -s   Do not print solution boards, count them only.\n"
         "                 Specify twice to be even more silent.\n"
+        "  --trace, -t    Trace; show matrix after each move.\n"
         "  --help, -h, -? Print this help.\n"
         "  -           A single dash reads cell_definition from stdin,\n"
         "              line by line or in one line, separated by blanks.\n"
@@ -195,11 +204,11 @@ int main(int argc, char** argv)
     while (found < find_max && solve_sudoku(found)) {
         found++;
         if (silent == 0) {
-            printf("Solution #%d found:\n", found);
+            printf("Solution #%d found (%u moves):\n", found, total_moves);
             print_matrix();
         }
         else if (silent == 1) {
-            printf("Found %d\r", found);
+            printf("Found %d (%u moves)\r", found, total_moves);
         }
     }
 
@@ -211,25 +220,26 @@ int main(int argc, char** argv)
     }
     else if (found >= find_max) {
         if (silent == 1) {
-            printf("Solution #%d found:\n", found);
+            printf("Solution #%d found (%u moves):\n", found, total_moves);
             print_matrix();
         }
-        printf("Stopped after found %d. More solutions may exist.\n", found);
+        printf("Stopped after found %d (%u moves). More solutions may exist.\n", found, total_moves);
     }
     else if (found > 0) {
         if (silent == 1) {
-            printf("Solution #%d found:\n", found);
+            printf("Solution #%d found (%u moves):\n", found, total_moves);
             print_matrix();
         }
-        printf("Found %d. No more solutions exist.\n", found);
+        printf("Found %d (%u moves). No more solutions exist.\n", found, total_moves);
     }
     else {
         if (best_pos_count > 0) {
-            printf("No solution found. Mostly filled matrix (%d times):\n", best_pos_count);
+            printf("No solution found (%u moves). Mostly filled matrix (%d times, 1st after %u moves):\n",
+                                    total_moves, best_pos_count, best_pos_try_count);
             print_best_matrix();
         }
         else {
-            printf("No solution found:\n");
+            printf("No solution found (%u moves):\n", total_moves);
             print_matrix();
         }
     }
@@ -259,6 +269,10 @@ int parse_options(int argc, char **argv)
                 silent++;
                 continue;
             }
+            if (!strcmp(opt, "trace")) {
+                trace_moves++;
+                continue;
+            }
             if (!strcmp(opt, "max")) {
                 if (!arg) {
                     if (--argc < 0) {
@@ -280,6 +294,9 @@ int parse_options(int argc, char **argv)
                 return -2;
             case 's':
                 silent++;
+                break;
+            case 't':
+                trace_moves++;
                 break;
             case 'm':
                 if (!arg) {
@@ -493,12 +510,17 @@ bool solve_sudoku(int found)
                 return true;    // All cells set: solution found; may be there are more...
             }
         }
+        total_moves++;
         if (advance_cell(pos/9, pos%9)) {
+            if (trace_moves) {
+                print_trace("forward");
+            }
 
             ++filled_pos;
             if (filled_pos > best_pos) {
                 memcpy(best_matrix, matrix, sizeof(matrix));
                 best_pos = filled_pos;
+                best_pos_try_count = total_moves;
                 best_pos_count = 1;
             }
             else if (filled_pos == best_pos) {
@@ -510,6 +532,10 @@ bool solve_sudoku(int found)
                 return true;    // All cells set: solution found; may be there are more...
             }
         } else {
+            if (trace_moves) {
+                print_trace("back");
+            }
+
             do {
                 if (pos == start_pos) {
                     return false; // No solution found
@@ -570,6 +596,26 @@ void print_matrix(void)
 void print_best_matrix(void)
 {
     print_mat(best_matrix);
+}
+
+void print_trace(char *info)
+{
+    printf("Matrix after move %u (%s):\n", total_moves, info ? info : "");
+    print_matrix();
+    if (trace_moves >= 2) {
+        printf("Press Enter to continue (h for help) ...");
+        char line[8] = { 0 };
+        for(;;) {
+            fgets(line, sizeof(line) - 1, stdin);
+            switch (line[0]) {
+            case 'r': trace_moves = 1; return;
+            case 'g': trace_moves = 0; return;
+            case 'q': exit(EXIT_SUCCESS); return;
+            case '\n': return;
+            }
+            printf("Enter r to continue trace without stop; enter g to continue without trace\n");
+        }
+    }
 }
 
 /* Utility to print lines and crosses, used by print_matrix. */
